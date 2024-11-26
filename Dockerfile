@@ -4,10 +4,8 @@ FROM alpine:latest
 RUN apk add --no-cache \
     chromium \
     python3 \
-    py3-pip
-
-# Install Python dependencies
-RUN pip3 install --no-cache-dir flask
+    py3-pip \
+    py3-flask
 
 # Create working directory
 WORKDIR /app
