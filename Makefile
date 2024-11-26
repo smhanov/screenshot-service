@@ -12,7 +12,7 @@ build:
 
 # Run the container
 run:
-	docker run -d -p $(PORT):$(PORT) --name $(IMAGE_NAME) $(IMAGE_NAME)
+	docker run -it -p $(PORT):$(PORT) --name $(IMAGE_NAME) $(IMAGE_NAME)
 
 # Stop the container
 stop:
