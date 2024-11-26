@@ -2,14 +2,21 @@
 from flask import Flask, request, send_file                                                                                      
 import subprocess                                                                                                                
 import os                                                                                                                        
-import uuid                                                                                                                      
-import threading                                                                                                                 
+import uuid
+import threading
+import tempfile
+import shutil                                                                                                                 
                                                                                                                                 
 app = Flask(__name__)                                                                                                            
                                                                                                                                 
-def cleanup_file(filename, delay=5):                                                                                             
-    # Delete the screenshot file after a delay                                                                                   
-    threading.Timer(delay, lambda: os.remove(filename) if os.path.exists(filename) else None).start()                            
+def cleanup_resources(filename, temp_dir, delay=5):                                                                                             
+    # Delete the screenshot file and temp directory after a delay                                                                                   
+    def cleanup():
+        if os.path.exists(filename):
+            os.remove(filename)
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+    threading.Timer(delay, cleanup).start()                            
                                                                                                                                 
 @app.route('/screenshot')                                                                                                        
 def take_screenshot():                                                                                                           
@@ -23,8 +30,9 @@ def take_screenshot():
     time_budget = request.args.get('time_budget', '1000')
     userAgent= request.args.get('user_agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36')                                                                       
                                                                                                                                 
-    # Generate unique filename for this request                                                                                  
-    filename = f"screenshot_{uuid.uuid4()}.png"                                                                                  
+    # Generate unique filename and temp directory for this request                                                                                  
+    filename = f"screenshot_{uuid.uuid4()}.png"
+    temp_dir = tempfile.mkdtemp(prefix='chrome_')
                                                                                                                                 
     try:                                                                                                                         
         # Construct the command                                                                                                  
@@ -32,7 +40,8 @@ def take_screenshot():
             'chromium-browser',                                                                                                  
             '--headless',                                                                                                        
             '--disable-gpu',                                                                                                     
-            '--no-sandbox',                                                                                                      
+            '--no-sandbox',
+            f'--user-data-dir={temp_dir}',                                                                                      
             f'--screenshot={filename}',                                                                                          
             f'--window-size={width},{height}',                                                                                   
             f'--virtual-time-budget={time_budget}',
@@ -43,8 +52,8 @@ def take_screenshot():
         # Execute the command                                                                                                    
         subprocess.run(cmd, check=True)                                                                                          
                                                                                                                                 
-        # Schedule cleanup of the file                                                                                           
-        cleanup_file(filename)                                                                                                   
+        # Schedule cleanup of resources                                                                                           
+        cleanup_resources(filename, temp_dir)                                                                                                   
                                                                                                                                 
         # Return the screenshot                                                                                                  
         return send_file(filename, mimetype='image/png')                                                                         
